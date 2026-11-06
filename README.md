@@ -5,6 +5,8 @@
 A Snake game where the snake plays by itself: an AI uses search (Greedy, BFS, DFS, Dijkstra
 and A*) to find its way to the apples, also on rough terrain where some tiles cost more time.
 
+![AI Snake demo: BFS on the flat board, then A* on the mud river map](screenshots/demo.gif)
+
 ---
 
 ## 🚀 Features
@@ -97,7 +99,8 @@ print(f"Move {direction}, path of {len(path)} tiles, explored {len(explored)} ti
 | `benchmark.py` | Plays many games per AI without drawing and prints tables. |
 | `maps/` | Terrain maps, 20 x 15 characters: `.` grass, `:` sand, `~` mud, `#` rock. |
 | `assets/` | Snake head picture and sounds. |
-| `screenshots/` | Pictures for the report. |
+| `screenshots/` | Pictures for the report and the demo GIF. |
+| `report/` | The report (`report.pdf`, made from `report.html`). |
 
 ## 🧪 Running Tests
 

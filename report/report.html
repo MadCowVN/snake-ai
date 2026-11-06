@@ -1,0 +1,126 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>AI Snake - Report</title>
+<style>
+  @page { size: A4; margin: 20mm 20mm; }
+  body { font-family: "Times New Roman", serif; font-size: 11pt; line-height: 1.4; color: #000; }
+  h1 { font-size: 16pt; text-align: center; margin: 0 0 4px; }
+  .author { text-align: center; margin: 0 0 14px; }
+  h2 { font-size: 13pt; margin: 14px 0 4px; }
+  p { margin: 0 0 7px; text-align: justify; }
+  ul { margin: 0 0 7px; padding-left: 20px; }
+  table { border-collapse: collapse; margin: 6px auto 10px; font-size: 10pt; }
+  th, td { border: 1px solid #000; padding: 2px 8px; text-align: right; }
+  td:first-child, th:first-child, td.l { text-align: left; }
+  code { font-family: Consolas, monospace; font-size: 9.5pt; }
+  figure { margin: 6px 0 10px; text-align: center; break-inside: avoid; }
+  figcaption { font-size: 10pt; margin-top: 3px; }
+</style>
+</head>
+<body>
+
+<h1>AI Snake: Search Algorithms</h1>
+<p class="author">Ngan Nghiem</p>
+
+<p>Extras done in this project:</p>
+<ul>
+  <li>BFS and DFS (searching the whole board)</li>
+  <li>Rough terrain with Dijkstra and A*</li>
+</ul>
+<p>The code is on GitHub: github.com/MadCowVN/snake-ai. It is written in Python with pygame, on a board of
+20 × 15 tiles.</p>
+
+<h2>1. Core: the greedy snake</h2>
+<p>Every move, the greedy AI looks at the four tiles next to the head. A tile is skipped if it is outside the
+board or part of the snake. Of the tiles that are left, the snake moves to the one with the smallest
+Manhattan distance to the apple. If no tile is safe, the game is over.</p>
+<p>I started from my own old Snake game and ran into a few problems. The window was 550 pixels with tiles of
+30 pixels, so the last row and column were cut off. I changed the board to be counted in tiles. The picture
+of the head never turned with the snake, because the rotation code was outside the drawing loop. The apple was
+placed with a loop that never ends when the board is full, so now it picks from a list of free tiles. Finally,
+the game logic was mixed with pygame, so I moved it to its own file to be able to test the AIs without a
+window.</p>
+<p>Greedy only looks one step ahead, so it gets stuck. It always moves closer to the apple, even into a corner
+or corridor made by its own body. When the snake is long, it walks into such a pocket and cannot get out
+(figure 1). On average greedy eats 27 apples before this happens.</p>
+<figure><img src="../screenshots/greedy_stuck.png" style="width:52%">
+<figcaption>Figure 1: Greedy has followed the apple into a pocket of its own body and has no safe move left.</figcaption></figure>
+
+<h2>2. Extra: BFS and DFS</h2>
+<p>BFS and DFS search from the head to the apple every move, with the body as a wall. For every tile I remember
+the tile it came from, so I can walk back from the apple to get the path, and the snake takes the first step
+of it. BFS and DFS use the same function. The only difference is one line: BFS takes the oldest tile from a
+queue (<code>popleft()</code>) and DFS takes the newest tile from a stack (<code>pop()</code>). If the apple cannot
+be reached, the snake takes a safe greedy step and tries again on the next move.</p>
+<p>Table 1 compares the three AIs on 50 games each, with the same random seeds.</p>
+<table>
+<tr><th>AI</th><th>Apples (avg)</th><th>Apples (max)</th><th>Moves (avg)</th><th>Explored tiles per move</th></tr>
+<tr><td>Greedy</td><td>27.3</td><td>59</td><td>369.8</td><td>2.7</td></tr>
+<tr><td>BFS</td><td>49.0</td><td>74</td><td>687.9</td><td>87.6</td></tr>
+<tr><td>DFS</td><td>1.1</td><td>4</td><td>1270.4</td><td>155.6</td></tr>
+</table>
+<p style="text-align:center">Table 1: Greedy, BFS and DFS on the flat board.</p>
+
+<p>BFS finds the shortest path because the queue takes tiles out in the order they were found. First all tiles
+one step away are checked, then all tiles two steps away, and so on. So when BFS reaches the apple, there is no
+shorter path. In figure 2 you can see BFS spreading out around the head.</p>
+<p>DFS keeps going from the newest tile, so it follows one direction until it hits something and then turns.
+It does not care where the apple is, so the path becomes long and zig-zags over the board (figure 3). Because
+the snake searches again after every move, it gets a new plan each time and never finishes a path. In my test
+the snake ended up walking in a loop, which is why DFS eats only about one apple per game.</p>
+<figure>
+<img src="../screenshots/bfs.png" style="width:44%">&nbsp;
+<img src="../screenshots/dfs.png" style="width:44%">
+<figcaption>Figure 2 (left): BFS. Figure 3 (right): DFS. Blue tiles are explored, green dots are the planned path.</figcaption>
+</figure>
+
+<p>Figure 4 shows a situation where greedy gets stuck but BFS does not. The apple is on the other side of the
+snake's body. Greedy goes up along the right edge, because that brings it closer to the apple, and dies in the
+corner. BFS finds the longer way around the body and reaches the apple.</p>
+<figure><img src="../screenshots/greedy_vs_bfs.png" style="width:88%">
+<figcaption>Figure 4: The same situation. Left: greedy's moves until it dies. Right: the path BFS finds.</figcaption></figure>
+
+<h2>3. Extra: rough terrain with Dijkstra and A*</h2>
+<p>I added four kinds of terrain: grass (time 1), sand (time 2), mud (time 5) and rock, which works like a wall.
+Each map is a text file with one character per tile. Every move costs the time of the tile the snake moves
+onto, the time is shown next to the score, and the snake moves slower on expensive tiles.</p>
+<p>I made three maps. The first, mud river, has a river of mud through the middle with two grass bridges, so
+there is a short way through the mud and a longer way over a bridge. The second, rocky desert, is mostly sand
+with rock walls, a mud pond and a grass road around the edge. The third, swamp roads, is all mud except for a
+grid of grass roads. I made this one to show how badly BFS can do when it ignores the cost.</p>
+<p>Dijkstra and A* use a priority queue (<code>heapq</code>) instead of a normal queue. They remember the cheapest
+time found so far to every tile and always continue from the tile with the lowest value. Dijkstra uses only the
+time so far. A* adds a guess of the time left: the Manhattan distance times the cheapest terrain cost. This
+guess is never too high, so A* still finds the fastest route, but it searches in the direction of the apple
+first. The main difference with BFS is that BFS counts moves, while Dijkstra and A* count time.</p>
+<p>Figure 5 shows an example where they choose a different route. BFS goes straight through the mud in 12 moves
+but uses 18 + 10 = 28 time. A* takes the bridge: 18 moves, but only 18 time.</p>
+<figure><img src="../screenshots/route_mud_river_bfs_vs_astar.png" style="width:88%">
+<figcaption>Figure 5: The same situation on the mud river map. Left: BFS. Right: A*.</figcaption></figure>
+
+<p>To compare them, I ran BFS, Dijkstra and A* on every map without drawing. Each algorithm played 30 games with
+the same seeds for the apples and stopped at 30 apples. Table 2 shows the averages.</p>
+<table>
+<tr><th>Map</th><th>Algorithm</th><th>Apples</th><th>Time used</th><th>Time per apple</th><th>Moves</th><th>Explored tiles per move</th></tr>
+<tr><td>Mud river</td><td class="l">BFS</td><td>29.9</td><td>712.0</td><td>23.8</td><td>378.8</td><td>91.3</td></tr>
+<tr><td></td><td class="l">Dijkstra</td><td>29.8</td><td>491.5</td><td>16.5</td><td>409.2</td><td>88.1</td></tr>
+<tr><td></td><td class="l">A*</td><td>29.8</td><td>487.6</td><td>16.3</td><td>408.1</td><td>31.1</td></tr>
+<tr><td>Rocky desert</td><td class="l">BFS</td><td>29.0</td><td>902.4</td><td>31.1</td><td>419.0</td><td>80.4</td></tr>
+<tr><td></td><td class="l">Dijkstra</td><td>29.9</td><td>758.5</td><td>25.4</td><td>517.9</td><td>71.7</td></tr>
+<tr><td></td><td class="l">A*</td><td>29.9</td><td>758.6</td><td>25.4</td><td>516.6</td><td>40.5</td></tr>
+<tr><td>Swamp roads</td><td class="l">BFS</td><td>29.9</td><td>1355.1</td><td>45.3</td><td>378.8</td><td>91.3</td></tr>
+<tr><td></td><td class="l">Dijkstra</td><td>30.0</td><td>697.1</td><td>23.2</td><td>462.3</td><td>85.7</td></tr>
+<tr><td></td><td class="l">A*</td><td>29.8</td><td>691.9</td><td>23.2</td><td>455.2</td><td>38.5</td></tr>
+</table>
+<p style="text-align:center">Table 2: BFS, Dijkstra and A* on the three maps.</p>
+
+<p>BFS always uses the fewest moves, but the most time. It loses the most time on the swamp roads map, where it
+needs almost twice as much time per apple, because it walks straight through the mud. Dijkstra and A* find
+routes that take the same time, but A* explores only about a third to half as many tiles, because it searches
+towards the apple. For this game I would choose A*: it is as fast as Dijkstra for the snake and does less work
+every move.</p>
+
+</body>
+</html>
